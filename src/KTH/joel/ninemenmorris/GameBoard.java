@@ -8,113 +8,88 @@ package KTH.joel.ninemenmorris;
  * To change this template use File | Settings | File Templates.
  */
 
+import android.graphics.*;
+import android.view.MotionEvent;
 import android.view.SurfaceView;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 public class GameBoard extends SurfaceView implements SurfaceHolder.Callback
 {
     private Marker marker = null;
-
-    private Bitmap bitmap;
-
-    private float x, y;
-    private float vx, vy;
+    private Board board;
 
     public GameBoard(Context context)
     {
         super(context);
         // TODO Auto-generated constructor stub
         //bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ball);
-
-        x = 50.0f;
-        y = 50.0f;
-
-        vx = 10.0f;
-        vy = 10.0f;
+        board = new Board(Color.WHITE);
+        board.set(0, 0, 500, 500);
 
         getHolder().addCallback(this);
-        marker = new Marker(getHolder(), this);
+        setFocusable(true);
+        this.requestFocus();
+        this.setFocusableInTouchMode(true);
     }
 
-    protected void onDraw(Canvas canvas) {
-
-        update(canvas);
-
-        canvas.drawBitmap(bitmap, x, y, null);
+    public void setGameStarted(boolean mode)
+    {
+        marker.setRunnable(mode);
     }
 
-    public void update(Canvas canvas) {
-
-        checkCollisions(canvas);
-
-        x += vx;
-        y += vy;
-    }
-
-    public void checkCollisions(Canvas canvas) {
-
-        if(x - vx < 0) {
-
-            vx = Math.abs(vx);
-
-        } else if(x + vx > canvas.getWidth() - getBitmapWidth()) {
-
-            vx = -Math.abs(vx);
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        float currentX = event.getX();
+        float currentY = event.getY();
+        float deltaX, deltaY;
+        float scalingFactor = event.getSize();
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_MOVE:
+                deltaX = currentX - marker.getX();
+                deltaY = currentY - marker.getY();
+                //vx += deltaX * scalingFactor;
+                //vy += deltaY * scalingFactor;
         }
-
-        if(y - vy < 0) {
-
-            vy = Math.abs(vy);
-
-        } else if(y + vy > canvas.getHeight() - getBitmapHeight()) {
-
-            vy = -Math.abs(vy);
-        }
+        marker.move(board, currentX, currentY);
+        return true;
     }
 
-    public int getBitmapWidth() {
+    @Override
+    protected void onDraw(Canvas canvas)
+    {
+        super.onDraw(canvas);
 
-        if(bitmap != null) {
+        canvas.drawColor(Color.BLACK);
+        //canvas.drawBitmap(bitmap, x, y, null);
+        marker.draw(canvas);
 
-            return bitmap.getWidth();
+        try {
+            Thread.sleep(30);
+        } catch (InterruptedException e) { }
 
-        } else {
-
-            return 0;
-        }
+        //invalidate();  // Force a re-draw
     }
 
-    public int getBitmapHeight() {
-
-        if(bitmap != null) {
-
-            return bitmap.getHeight();
-
-        } else {
-
-            return 0;
-        }
-    }
-
+    @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width,
                                int height) {
         // TODO Auto-generated method stub
 
     }
 
-    public void surfaceCreated(SurfaceHolder holder) {
-        // TODO Auto-generated method stub
+    @Override
+    public void surfaceCreated(SurfaceHolder holder)
+    {
+        marker = new Marker(getHolder(), this);
         marker.setRunnable(true);
         marker.start();
 
     }
 
+    @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         // TODO Auto-generated method stub
 

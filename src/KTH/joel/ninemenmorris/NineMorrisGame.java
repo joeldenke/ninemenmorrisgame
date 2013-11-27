@@ -88,6 +88,7 @@ public class NineMorrisGame extends Activity
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        board.setGameStarted(true);
 
         switch (requestCode) {
             case RESULT_SETTINGS:
@@ -107,6 +108,8 @@ public class NineMorrisGame extends Activity
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        board.setGameStarted(false);
+
         switch (item.getItemId()) {
             case R.id.menu_settings:
                 Intent i = new Intent(this, SettingsActivity.class);
