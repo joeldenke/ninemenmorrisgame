@@ -38,6 +38,11 @@ public class Rules
         turn = READ_MOVES;
     }
 
+    public int getTurn()
+    {
+        return turn;
+    }
+
     /**
      * Returns true if a move is successful
      */

@@ -1,11 +1,10 @@
 package KTH.joel.ninemenmorris;
 
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
+import android.graphics.*;
+import android.util.Log;
 import android.view.SurfaceHolder;
 
-public class Marker extends Thread
+public class Marker implements Runnable
 {
 
     private SurfaceHolder sh;
@@ -13,51 +12,65 @@ public class Marker extends Thread
 
     private Canvas canvas;
 
-    private boolean run = false;
     private float x, y;
-    private float vx, vy;
     private Paint paint = new Paint();
     private float radius = 30;
+    private Thread thread = null;
+    private int color;
+    private boolean locked = false;
 
-    public Marker(SurfaceHolder _holder, GameBoard _ball)
+    public Marker(SurfaceHolder holder, GameBoard board, int color, Point p)
     {
-        paint.setColor(Color.GREEN);
+        paint.setColor(color);
         paint.setStrokeWidth(3);
 
-        x = 50.0f;
-        y = 50.0f;
+        x = p.x;
+        y = p.y;
 
-        vx = 10.0f;
-        vy = 10.0f;
+        sh = holder;
+        this.board = board;
+        this.color = color;
 
-        sh = _holder;
-        board = _ball;
+        update();
     }
 
-    public void move(Board box, float x, float y)
+    public void setLock(boolean lock)
     {
-        if (!isCollision(box, x, y)) {
-            setX(x);
-            setY(y);
+        this.locked = lock;
+    }
+
+    public int getColor()
+    {
+        return paint.getColor();
+    }
+
+    public void move(Board box, Point p)
+    {
+        if (isOnBoard(box, p) && !locked) {
+            setX(p.x);
+            setY(p.y);
         }
     }
 
-    public boolean isCollision(Board box, float x, float y) {
-        boolean collision = false;
-
-        if (x + radius > box.xMax || x - radius < box.xMin) {
-            collision = true;
-        }
-        if (y + radius > box.yMax || y - radius < box.yMin) {
-            collision = true;
-        }
-
-        return collision;
+    public float getRadius()
+    {
+       return radius;
     }
 
-    public void setRunnable(boolean _run) {
+    public boolean isOnBoard(Board board, Point p)
+    {
+        Rect a = board.getBounds();
+        Rect b = new Rect((int) (p.x-radius), (int) (p.y-radius), (int) (p.x + radius), (int) (p.y + radius));
 
-        run = _run;
+        //Log.d("Rect:", String.format("Rectangle A: [%d, %d, %d, %d]", a.left, a.top, a.right, a.bottom));
+        //Log.d("Rect:", String.format("Rectangle B: [%d, %d, %d, %d]", b.left, b.top, b.right, b.bottom));
+
+        return b.intersect(a);
+    }
+
+    public boolean isRunning()
+    {
+        return thread != null;
     }
 
     public void draw(Canvas canvas)
@@ -78,43 +91,59 @@ public class Marker extends Thread
         this.y = y;
     }
 
-    @Override
-    public void run() {
+    public void update()
+    {
+        canvas = null;
 
-        while(run) {
+        try {
+            canvas = sh.lockCanvas(null);
 
-            canvas = null;
+            synchronized(sh) {
+                board.onDraw(canvas);
+            }
+        } finally {
 
-            try {
+            if(canvas != null) {
 
-                canvas = sh.lockCanvas(null);
-
-                synchronized(sh) {
-
-                    board.onDraw(canvas);
-                }
-
-            } finally {
-
-                if(canvas != null) {
-
-                    sh.unlockCanvasAndPost(canvas);
-                }
-
+                sh.unlockCanvasAndPost(canvas);
             }
 
         }
     }
 
-    public Canvas getCanvas() {
+    public void moveTo(Board box, Point to)
+    {
+        Point startDist = new Point((int)x - to.x, (int)y - to.y);
+        Point currentDist = startDist;
+        int dv = (startDist.y / startDist.x);
 
-        if(canvas != null) {
+        startThread();
+        while (currentDist.x > 100 && currentDist.y > 100) {
+            x += dv;
+            y += dv;
+            currentDist = new Point((int)x - to.x, (int)y - to.y);
+        }
+        stopThread();
+    }
 
-            return canvas;
+    public void startThread()
+    {
+        if (thread == null) {
+            thread = new Thread(this);
+            thread.start();
+        }
+    }
 
-        } else {
+    public void stopThread()
+    {
+        thread = null;
+    }
 
-            return null;
+    @Override
+    public void run()
+    {
+        while (thread != null) {
+            update();
         }
     }
 }
