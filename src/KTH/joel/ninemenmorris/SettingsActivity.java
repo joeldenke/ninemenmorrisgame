@@ -22,8 +22,9 @@ public class SettingsActivity extends PreferenceActivity
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        //setContentView(R.layout.preference);
         getFragmentManager().beginTransaction()
-                .replace(android.R.id.content, new MyPreferenceFragment ())
+                .replace(android.R.id.content, new MyPreferenceFragment())
                 .commit();
     }
 

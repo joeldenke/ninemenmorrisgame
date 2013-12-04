@@ -13,32 +13,40 @@ import android.view.*;
 
 import android.content.Context;
 import android.view.SurfaceView;
+import android.view.animation.Animation;
+import android.view.animation.AnticipateOvershootInterpolator;
+import android.view.animation.TranslateAnimation;
 import android.widget.Toast;
 
-public class GameBoard extends SurfaceView implements SurfaceHolder.Callback
+import java.io.Serializable;
+
+enum States
 {
-    private Marker markers[] = new Marker[2];
-    private int currentMarker = 0;
+    Placing, Moving, Flying, Removing, End
+}
+
+public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Serializable
+{
+    private Marker markers[];
+    private int width, height;
+    private int currentMarker, markerSize = 18;
+    private int removeColor;
     private Board board;
     private Point start;
-    private int turn = Color.BLUE;
-    private int state = 1;
-    private Context context;
-    private boolean moving = false;
-    Marker marker = null;
-    Rules rules = new Rules();
-    Point markerStart = new Point(50, 50);
+    private int turn;
+    private States state;
+    private States prevState;
+    private Marker marker;
+    private Point markerStart;
+    private NineMorrisGame main;
 
-    public GameBoard(Context context)
+    public GameBoard(NineMorrisGame main, int width, int height)
     {
-        super(context);
-        this.context = context;
-        WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-        Display display = wm.getDefaultDisplay();
-        Point size = new Point();
-        display.getSize(size);
-        //bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ball);
-        board = new Board(Color.BLACK, 0, 0, size.x, size.y);
+        super(main);
+        this.width = width;
+        this.height = height;
+        this.main = main;
+        initGame();
 
         getHolder().addCallback(this);
         setFocusable(true);
@@ -46,52 +54,167 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback
         this.setFocusableInTouchMode(true);
     }
 
-    public void switchState()
+    public void initGame()
     {
-        int i;
+        //bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ball);
+        board = new Board(Color.BLACK, 0, 0, width, height);
+        turn = Color.BLUE;
+        state = States.Placing;
+        prevState = States.Placing;
 
-        switch (state) {
-            case 1:
-                currentMarker = 0;
-                for (i = 0; i < markers.length; i++) {
-                    if (markers[i] != null) {
-                        markers[i].setLock(false);
-                    }
-                }
-                state = 2;
-                break;
-            case 2:
-                state = 3;
-                break;
-            case 3:
-                state = 1;
-                break;
+        markers = new Marker[markerSize];
+        // Always put new markers is empty space
+        markerStart = board.getPlaceHolder(1, 0).getCenterPoint();
+        currentMarker = 0;
+        marker = null;
+        stopAnimations();
+
+        if (markers[currentMarker] == null) {
+            markers[currentMarker] = createMarker(turn, markerStart);
         }
-
-        flashMessage("Switch to state: " + state);
-       // marker.setRunnable(mode);
+        markers[currentMarker].update();
+        viewMessage("It is now " + ((turn == Color.RED) ? "red" : "blue") + " turn", true);
     }
 
-    public void flashMessage(String message)
+    public void viewMessage(String message, boolean flash)
     {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+        main.viewMessage(message, flash);
     }
 
     public Marker getMarker(Point p)
     {
-        int i;
-        Marker marker;
+        int i, dx, dy;
+        double d;
+        Marker marker = null, tmp;
 
-        for (i = 0; i < markers.length; i++) {
-            marker = markers[i];
-            if (marker != null) {
-                if (Math.pow(p.x - marker.getX(), 2) + Math.pow(p.y - marker.getX(), 2) <= Math.pow(marker.getRadius(), 2)) {
-                    flashMessage(String.format("[%d, %d] is inside circle [%f, %f]", p.x, p.y, marker.getX(), marker.getY()));
-                    return marker;
+        switch (state) {
+            case Placing:
+                if (currentMarker < markerSize) {
+                    marker = markers[currentMarker];
                 }
+                break;
+            case Moving:
+            case Removing:
+            case Flying:
+                //marker = board.getPlaceHolder(p.x, p.y).getMarker();
+
+                for (i = 0; i < markerSize; i++) {
+                    tmp = markers[i];
+                    if (tmp != null) {
+                        dx = p.x - tmp.getX();
+                        dy = p.y - tmp.getY();
+
+                        if (Math.sqrt(dx*dx + dy*dy) <= tmp.getRadius()) {
+                            currentMarker = i;
+
+                            //viewMessage(String.format("[%d, %d] is inside circle [%f, %f]", p.x, p.y, tmp.getX(), tmp.getY()));
+                            marker = tmp;
+                        }
+                    }
+                }
+                break;
+        }
+
+        if (marker != null) {
+            if (state == States.Removing || marker.getColor() == turn) {
+                return marker;
             }
         }
         return null;
+    }
+
+    private int countColor(int color)
+    {
+         int i, c = 0;
+        for (i = 0; i < markerSize; i++) {
+            if (markers[i] != null && markers[i].getColor() == color) {
+                c++;
+            }
+        }
+        return c;
+    }
+
+    private boolean isValidMove(Marker marker, Point to)
+    {
+        if (state == States.Removing) {
+            return true;
+        }
+        int i;
+        Point from = marker.getPosition();
+
+        // Cannot move to same position you are in
+        if (from != null && from.equals(to.x, to.y)) {
+            return false;
+        }
+
+        // Cannot move to same place another marker is positioned
+        for (i = 0; i < markerSize; i++) {
+            if (markers[i] != null && markers[i].getPosition() != null && markers[i].getPosition().equals(to.x, to.y)) {
+                return false;
+            }
+        }
+
+        // Flying
+        if (countColor(turn) <= 3) {
+            return true;
+        }
+
+        switch (state) {
+            case Placing:
+                return true;
+            case Moving:
+                return (Math.abs(from.x - to.x) <= 1 && Math.abs(from.y - to.y) <= 1);
+            default :
+                return false;
+        }
+    }
+
+    public int winner()
+    {
+        int i, redMarker = 0, blueMarker = 0;
+
+        if (state == state.Placing) {
+            return -1;
+        }
+
+        for (i = 0; i < markerSize; i++) {
+            if (markers[i] != null) {
+                if (markers[i].getColor() == Color.BLUE) {
+                    blueMarker++;
+                } else if (markers[i].getColor() == Color.RED) {
+                    redMarker++;
+                }
+            }
+        }
+
+        if (redMarker < 3) {
+            return Color.BLUE;
+        } else if (blueMarker < 3) {
+            return Color.RED;
+        } else {
+            return -1;
+        }
+    }
+
+    private boolean removeMarker(Point p, int color)
+    {
+        int i;
+
+        for (i = 0; i < markerSize; i++) {
+
+            if (markers[i] != null && markers[i].getColor() == color) {
+                Point p2 = markers[i].getPosition();
+
+                if (p.equals(p2.x, p2.y)) {
+                    board.removeMarker(p);
+                    markers[i].stopThread();
+                    markers[i] = null;
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     @Override
@@ -99,67 +222,126 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback
     {
         Point current = new Point((int)event.getX(), (int)event.getY());
         //float scalingFactor = event.getSize();
-        int cursor;
-
-        if (marker == null) {
-        switch (state) {
-            case 1:
-                marker = markers[currentMarker];
-                break;
-            case 2:
-                Marker tmp = getMarker(current);
-
-                if (tmp != null && tmp.getColor() == turn) {
-                    marker = tmp;
-                }
-                break;
-        } }
-
-        if (marker == null) {
-            return true;
-        }
-
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_UP:
-                Point p = board.blockIntersecting(current, (int)marker.getRadius());
+                if (marker == null || state == States.End) {
+                    return true;
+                }
 
-                if (p.x != -1 && p.y != -1) {
-                    marker.move(board, p);
+                Point p = board.circleIntersecting(current, marker.getRadius());
+
+                if (p.x != -1 && p.y != -1 && isValidMove(marker, p)) {
+                    if (state == States.Removing) {
+                        if (removeMarker(p, removeColor)) {
+                            state = prevState;
+                        } else {
+                            viewMessage(String.format("Cannot remove color %s from [%d, %d]", ((removeColor == Color.RED) ? "red" : "blue"), p.x, p.y), false);
+                            return true;
+                        }
+
+                        int winner = winner();
+                        if (winner != -1) {
+                            state = States.End;
+                            viewMessage(String.format("Color %s is the winner!", ((winner == Color.RED) ? "red" : "blue")), true);
+                            return true;
+                        }
+                    } else {
+                        //viewMessage(String.format("Moving to matrix position [%d, %d]", p.x, p.y));
+                        board.moveTo(marker, p);
+                        //viewMessage(String.format("Moved marker to [%d, %d]", p.x, p.y));
+
+                        if (board.doThreeInARow(p, turn)) {
+                            viewMessage("You created a mill, click on the other players marker to remove it", true);
+                            prevState = state;
+                            state = States.Removing;
+                            removeColor = (turn == Color.RED) ? Color.BLUE : Color.RED;
+                            return true;
+                        }
+                    }
+
                     turn = (turn == Color.RED) ? Color.BLUE : Color.RED;
+                    viewMessage("It is now " + ((turn == Color.RED) ? "red" : "blue") + " turn", true);
 
-                    if (state == 1) {
+                    if (state == States.Placing) {
                         //marker.setLock(true);
 
-                        if (currentMarker < markers.length - 1) {
+                        if (currentMarker < markerSize - 1) {
                             markers[++currentMarker] = createMarker(turn, markerStart);
                         } else {
-                            currentMarker = 0;
-                            int i;
-                            for (i = 0; i < markers.length; i++) {
-                                if (markers[i] != null) {
-                                    markers[i].setLock(false);
-                                }
-                            }
-                            state = 2;//switchState();
+                            state = States.Moving;
                         }
                     }
                 } else {
-                    marker.moveTo(board, markerStart);
+                    viewMessage("Invalid move", true);
+                    marker.move(board, start);
                 }
                 marker.stopThread();
+                //marker.update();
                 marker = null;
                 break;
             case MotionEvent.ACTION_MOVE:
+                if (marker == null || state == States.Removing || state == States.End) {
+                    return true;
+                }
                 marker.move(board, current);
                 break;
             case MotionEvent.ACTION_DOWN:
+                if (marker != null || state == States.End) { // Previous animation is not finished or someone has won
+                    return true;
+                }
+
+                marker = getMarker(current);
                 start = current;
+
+                if (marker == null) {
+                   return true;
+                }
+                //viewMessage("Will now try to move marker");
                 marker.startThread();
                 break;
 
         }
         return true;
+    }
+
+    public void moveSmooth(Marker marker, Point to)
+    {
+        Point from = new Point(marker.getX(), marker.getY());
+        Animation anim = new TranslateAnimation(
+                Animation.ABSOLUTE, //from xType
+                from.x,
+                Animation.ABSOLUTE, //to xType
+                to.x,
+                Animation.ABSOLUTE, //from yType
+                from.y,
+                Animation.ABSOLUTE, //to yType
+                to.y
+        );
+
+        Animation.AnimationListener animL = new Animation.AnimationListener() {
+
+            @Override
+            public void onAnimationStart(Animation animation) {
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                //this is just a method to delete the ImageView and hide the animation Layout until we need it again.
+                clearAnimation();
+            }
+        };
+
+        anim.setAnimationListener(animL);
+        anim.setInterpolator(new AnticipateOvershootInterpolator(1.0f));
+        anim.setDuration(2000);
+        this.setAnimation(anim);
+        anim.startNow();
+        //marker.move(board, to);
     }
 
     @Override
@@ -170,9 +352,10 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback
         canvas.drawColor(Color.WHITE);
         board.draw(canvas);
         //canvas.drawBitmap(bitmap, x, y, null);
+
         int i;
 
-        for (i = 0; i < markers.length; i++) {
+        for (i = 0; i < markerSize; i++) {
             if (markers[i] != null) {
                 markers[i].draw(canvas);
             }
@@ -180,14 +363,12 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback
 
         try {
             Thread.sleep(30);
-        } catch (InterruptedException e) { }
-
-        //invalidate();  // Force a re-draw
+        } catch (InterruptedException e) {}
     }
 
     public Marker createMarker(int color, Point p)
     {
-        Marker marker =  new Marker(getHolder(), this, color, p);
+        Marker marker =  new Marker(getHolder(), this, color, p, board.getPlaceHolder(0, 0).getRadius() - 10);
         marker.update();
         return marker;
     }
@@ -210,9 +391,14 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback
     @Override
     public void surfaceDestroyed(SurfaceHolder holder)
     {
+        stopAnimations();
+    }
+
+    public void stopAnimations()
+    {
         int i;
 
-        for (i = 0; i < markers.length; i++) {
+        for (i = 0; i < markerSize; i++) {
             if (markers[i] != null) {
                 markers[i].stopThread();
             }

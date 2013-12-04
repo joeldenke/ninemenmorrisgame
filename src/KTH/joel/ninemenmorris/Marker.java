@@ -4,7 +4,9 @@ import android.graphics.*;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
-public class Marker implements Runnable
+import java.io.Serializable;
+
+public class Marker implements Runnable, Serializable
 {
 
     private SurfaceHolder sh;
@@ -12,31 +14,24 @@ public class Marker implements Runnable
 
     private Canvas canvas;
 
-    private float x, y;
+    private int x, y;
     private Paint paint = new Paint();
-    private float radius = 30;
+    private int radius;
     private Thread thread = null;
-    private int color;
-    private boolean locked = false;
+    private Point position;
 
-    public Marker(SurfaceHolder holder, GameBoard board, int color, Point p)
+    public Marker(SurfaceHolder holder, GameBoard board, int color, Point p, int radius)
     {
         paint.setColor(color);
-        paint.setStrokeWidth(3);
 
         x = p.x;
         y = p.y;
 
         sh = holder;
+        this.radius = radius;
         this.board = board;
-        this.color = color;
 
         update();
-    }
-
-    public void setLock(boolean lock)
-    {
-        this.locked = lock;
     }
 
     public int getColor()
@@ -46,13 +41,25 @@ public class Marker implements Runnable
 
     public void move(Board box, Point p)
     {
-        if (isOnBoard(box, p) && !locked) {
+        if (isOnBoard(box, p)) {
             setX(p.x);
             setY(p.y);
         }
     }
 
-    public float getRadius()
+    public void setPosition(Point center, Point position)
+    {
+        setX(center.x);
+        setY(center.y);
+        this.position = position;
+    }
+
+    public Point getPosition()
+    {
+        return position;
+    }
+
+    public int getRadius()
     {
        return radius;
     }
@@ -60,12 +67,8 @@ public class Marker implements Runnable
     public boolean isOnBoard(Board board, Point p)
     {
         Rect a = board.getBounds();
-        Rect b = new Rect((int) (p.x-radius), (int) (p.y-radius), (int) (p.x + radius), (int) (p.y + radius));
-
-        //Log.d("Rect:", String.format("Rectangle A: [%d, %d, %d, %d]", a.left, a.top, a.right, a.bottom));
-        //Log.d("Rect:", String.format("Rectangle B: [%d, %d, %d, %d]", b.left, b.top, b.right, b.bottom));
-
-        return b.intersect(a);
+        Rect b = new Rect((p.x-radius), (p.y-radius), (p.x + radius), (p.y + radius));
+        return a.contains(b);
     }
 
     public boolean isRunning()
@@ -78,16 +81,16 @@ public class Marker implements Runnable
         canvas.drawCircle(x, y, radius, paint);
     }
 
-    public float getX() {
+    public int getX() {
         return x;
     }
-    public void setX(float x) {
+    public void setX(int x) {
         this.x = x;
     }
-    public float getY() {
+    public int getY() {
         return y;
     }
-    public void setY(float y) {
+    public void setY(int y) {
         this.y = y;
     }
 
@@ -99,7 +102,9 @@ public class Marker implements Runnable
             canvas = sh.lockCanvas(null);
 
             synchronized(sh) {
-                board.onDraw(canvas);
+                if (canvas != null) {
+                    board.onDraw(canvas);
+                }
             }
         } finally {
 
@@ -111,20 +116,22 @@ public class Marker implements Runnable
         }
     }
 
-    public void moveTo(Board box, Point to)
+    /*
+    public void moveToCoordinate(Board box, Point to)
     {
         Point startDist = new Point((int)x - to.x, (int)y - to.y);
         Point currentDist = startDist;
-        int dv = (startDist.y / startDist.x);
+        //int dv = (startDist.y / startDist.x);
 
-        startThread();
+
         while (currentDist.x > 100 && currentDist.y > 100) {
             x += dv;
             y += dv;
             currentDist = new Point((int)x - to.x, (int)y - to.y);
         }
-        stopThread();
-    }
+        x = to.x;
+        y = to.y;
+    }*/
 
     public void startThread()
     {
