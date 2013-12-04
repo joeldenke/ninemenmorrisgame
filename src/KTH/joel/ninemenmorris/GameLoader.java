@@ -17,7 +17,6 @@ public class GameLoader
 {
     private Context context;
     private String fileName;
-    private GameBoard[] games;
 
     public GameLoader(Context context, String fileName)
     {
@@ -30,22 +29,21 @@ public class GameLoader
         return new File(context.getFilesDir(), filename);
     }
 
-    public GameBoard[] loadGames()
+    public GameData[] loadGames()
     {
         File file = getFileResource(fileName);
         Log.d("load", file.getAbsoluteFile().toString());
-
+        GameData[] gameData = new GameData[5];
         //file.delete();
 
         if (file.exists() && file.canRead()) {
             BufferedReader reader = null;
             try {
                 ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
-                games = (GameBoard[])ois.readObject();
+                gameData = (GameData[])ois.readObject();
                 Log.d("load", "Successfully read from file");
             } catch (Exception fe) {
                 Log.d("load", "" + fe.getMessage());
-                games = new GameBoard[5];
             } finally {
                 if (reader != null) {
                     try {
@@ -53,11 +51,11 @@ public class GameLoader
                     } catch (IOException e) {}
                 }
             }
-        } else {
-            games = new GameBoard[5];
         }
 
-        return games;
+        Log.d("load", String.format("Got %d number of datainstances", gameData.length));
+
+        return gameData;
     }
 
     /**
@@ -65,20 +63,23 @@ public class GameLoader
      * @author Joel Denke
      *
      */
-    public void writeGames(GameBoard[] games)
+    public void writeGames(GameData[] gameData)
     {
-        if (games == null) {
-            return;
-        }
-
-        for (GameBoard board: games) {
-            if (board != null) {
-                board.stopAnimations();
+        if (gameData == null) {
+            Log.d("load", "Writing empty data ...");
+        } else {
+            int i;
+            for (i = 0; i < gameData.length; i++) {
+                if (gameData[i] == null) {
+                    Log.d("load", String.format("Element %d is fucking empty ...", i+1));
+                }
             }
         }
+
         File file = getFileResource(fileName);
         if (!file.exists()) {
             try {
+                Log.d("load", "Try to create a new file");
                 file.createNewFile();
             } catch (IOException e) {
                 Log.d("load", "Failed create new file");
@@ -87,7 +88,7 @@ public class GameLoader
 
         try {
             ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file));
-            oos.writeObject(games);
+            oos.writeObject(gameData);
             oos.flush(); // flush the stream to insure all of the information was written to file
             oos.close();
             Log.d("load", "Successfully wrote to file");

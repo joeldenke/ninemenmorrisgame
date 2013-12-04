@@ -15,14 +15,11 @@ public class Board implements Serializable
 {
     private final int rows = 7;
     private final int cols = 7;
-    private Paint paint;
     private PlaceHolder[][] boardMatrix = new PlaceHolder[rows][cols];
     private Rect bounds;
 
-    public Board(int color, int x, int y, int width, int height)
+    public Board(int x, int y, int width, int height)
     {
-        paint = new Paint();
-        paint.setColor(color);
         bounds = new Rect(x, y, x+width, y+height);
         //block = new Rect(0, 0, bounds.width() / cols, bounds.height() / rows);
 
@@ -134,13 +131,15 @@ public class Board implements Serializable
         }
     }
 
-    public void draw(Canvas canvas)
+    public void draw(Canvas canvas, Paint paint)
     {
         canvas.drawRect(bounds, paint);
         int i, j;
         for (i = 0; i < rows; i++) {
                 for (j = 0; j < cols; j++) {
-                    boardMatrix[i][j].draw(canvas);
+                    Paint p = new Paint();
+                    p.setColor(Color.WHITE);
+                    boardMatrix[i][j].draw(canvas, p);
                         //drawPlaceMarker(i, j, canvas);
                 }
         }

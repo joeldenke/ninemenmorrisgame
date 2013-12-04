@@ -13,9 +13,8 @@ import java.io.Serializable;
  */
 public class PlaceHolder implements Serializable
 {
-    private Rect bounds;
+    private transient Rect bounds;
     private Marker marker;
-    private Paint paint = new Paint();
     private int radius;
     private boolean empty = true;
 
@@ -25,7 +24,6 @@ public class PlaceHolder implements Serializable
         this.radius = (bounds.height() < bounds.width() ? bounds.height() / 2 : bounds.width() / 2);
 
         if (fill) {
-            paint.setColor(Color.WHITE);
             empty = false;
         }
     }
@@ -81,10 +79,10 @@ public class PlaceHolder implements Serializable
         return marker;
     }
 
-    public void draw(Canvas canvas)
+    public void draw(Canvas canvas, Paint p)
     {
         if (!empty) {
-            canvas.drawCircle(bounds.centerX(), bounds.centerY(), radius, paint);
+            canvas.drawCircle(bounds.centerX(), bounds.centerY(), radius, p);
         }
     }
 }

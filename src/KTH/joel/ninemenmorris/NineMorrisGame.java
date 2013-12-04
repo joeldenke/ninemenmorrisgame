@@ -36,19 +36,34 @@ public class NineMorrisGame extends Activity
 {
     private static final int RESULT_SETTINGS = 1;
 
-    private GameBoard[] gameBoards;
+    private GameBoard[] gameBoards = new GameBoard[5];
+    private GameData[] gameData;
     private TextView textView;
     private LinearLayout surface;
     private int currentBoard = 0;
-    private GameLoader loader;
+    private GameLoader loader = new GameLoader(this, "games");
+    private boolean started = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
 	    super.onCreate(savedInstanceState);
-        loader = new GameLoader(this, "games");
-        gameBoards = loader.loadGames();
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        currentBoard = Integer.parseInt(sharedPrefs.getString("prefGameBoard", "1")) - 1;
         initUI();
+        started = true;
+    }
+
+    private GameBoard importGameData(int width, int height)
+    {
+        //viewMessage(String.format("Got %d number of datainstances and current board is %d", gameData.length, currentBoard), true);
+
+        if (gameBoards[currentBoard] == null) {
+            GameData data = gameData[currentBoard];
+            gameBoards[currentBoard] = new GameBoard(this, data, width, height);
+        }
+
+        return gameBoards[currentBoard];
     }
 
     public void viewMessage(int resId, boolean flash)
@@ -57,7 +72,7 @@ public class NineMorrisGame extends Activity
     }
 
     /**
-     * @description Flash message on the screen
+     * @description view message on the screen
      * @author Joel Denke
      *
      */
@@ -101,12 +116,12 @@ public class NineMorrisGame extends Activity
         params.width = size.x - 50;
         params.height = size.y - 300;
 
-        if (gameBoards[currentBoard] == null) {
-            gameBoards[currentBoard] = new GameBoard(this, size.x-50, size.y - 300);
-        }
+        gameData = loader.loadGames();
+
+        GameBoard gameBoard = importGameData(size.x-50, size.y - 300);
 
         surface.removeAllViews();
-        surface.addView(gameBoards[currentBoard]);
+        surface.addView(gameBoard);
     }
 
     @Override
@@ -166,8 +181,12 @@ public class NineMorrisGame extends Activity
     {
         Log.i("SaveActivity", "onStart called");
     	super.onStart();
-        loader = new GameLoader(this, "games");
-        gameBoards = loader.loadGames();
+
+        if (!started) {
+            SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+            currentBoard = Integer.parseInt(sharedPrefs.getString("prefGameBoard", "1")) - 1;
+            initGameBoard();
+        }
     }
 
     /**
@@ -185,10 +204,23 @@ public class NineMorrisGame extends Activity
         initUI();
     }
 
+    private GameData[] getData()
+    {
+        int i;
+        for (i = 0; i < gameData.length; i++) {
+            if (gameBoards[i] != null) {
+                gameBoards[i].stopAnimations();
+                gameData[i] = gameBoards[i].getGameData();
+            }
+        }
+
+        return gameData;
+    }
+
     @Override
     protected void onPause()
     {
-        loader.writeGames(gameBoards);
+        loader.writeGames(getData());
         super.onPause();
         Log.i("SaveActivity", "onPause called");
     }
@@ -196,16 +228,16 @@ public class NineMorrisGame extends Activity
     @Override
     protected void onStop()
     {
-        loader.writeGames(gameBoards);
         super.onStop();
+        //loader.writeGames(gameData);
         Log.i("SaveActivity", "onStop called");
     }
 
     @Override
     protected void onDestroy()
     {
-        loader.writeGames(gameBoards);
         super.onDestroy();
+        loader.writeGames(getData());
         Log.i("SaveActivity", "onDestroy called");
     }
 }
