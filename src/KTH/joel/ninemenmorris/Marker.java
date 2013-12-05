@@ -6,15 +6,23 @@ import android.view.SurfaceHolder;
 
 import java.io.Serializable;
 
+/**
+ * @description Marker on the game board
+ * @author Joel Denke
+ *
+ */
 public class Marker implements Serializable
 {
     private int x, y;
     private int radius, color;
     private int i, j;
 
-    public Marker(int color, Point p, int radius)
+    public Marker(int color, Point p, int radius, int i, int j)
     {
         this.color = color;
+
+        this.i = i;
+        this.j = j;
 
         x = p.x;
         y = p.y;
@@ -27,6 +35,11 @@ public class Marker implements Serializable
         return color;
     }
 
+    /**
+     * @description Move marker to coordinate (x,y) if is inside board bounds
+     * @author Joel Denke
+     *
+     */
     public void move(Board box, Point p)
     {
         if (isOnBoard(box, p)) {
@@ -35,6 +48,11 @@ public class Marker implements Serializable
         }
     }
 
+    /**
+     * @description Move marker to placeholders position
+     * @author Joel Denke
+     *
+     */
     public void setPosition(Point center, Point position)
     {
         setX(center.x);
@@ -53,6 +71,11 @@ public class Marker implements Serializable
        return radius;
     }
 
+    /**
+     * @description Is marker inside board bounds?
+     * @author Joel Denke
+     *
+     */
     public boolean isOnBoard(Board board, Point p)
     {
         Rect a = board.getBounds();
@@ -60,6 +83,11 @@ public class Marker implements Serializable
         return a.contains(b);
     }
 
+    /**
+     * @description Draws the marker on canvas
+     * @author Joel Denke
+     *
+     */
     public void draw(Canvas canvas)
     {
         Paint paint = new Paint();
@@ -79,21 +107,4 @@ public class Marker implements Serializable
     public void setY(int y) {
         this.y = y;
     }
-
-    /*
-    public void moveToCoordinate(Board box, Point to)
-    {
-        Point startDist = new Point((int)x - to.x, (int)y - to.y);
-        Point currentDist = startDist;
-        //int dv = (startDist.y / startDist.x);
-
-
-        while (currentDist.x > 100 && currentDist.y > 100) {
-            x += dv;
-            y += dv;
-            currentDist = new Point((int)x - to.x, (int)y - to.y);
-        }
-        x = to.x;
-        y = to.y;
-    }*/
 }

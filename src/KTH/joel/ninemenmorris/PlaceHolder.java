@@ -5,11 +5,9 @@ import android.graphics.*;
 import java.io.Serializable;
 
 /**
- * Created with IntelliJ IDEA.
- * User: joel
- * Date: 2013-12-03
- * Time: 14:45
- * To change this template use File | Settings | File Templates.
+ * @description PlaceHolder who mark possible moving point and holds marker
+ * @author Joel Denke
+ *
  */
 public class PlaceHolder implements Serializable
 {
@@ -38,16 +36,20 @@ public class PlaceHolder implements Serializable
         return empty;
     }
 
+    /**
+     * @description Is a marker intersecting with a placeHolder?
+     * @author Joel Denke
+     *
+     */
     public boolean circleIntersecting(Point p, int radius)
     {
-        // a = r1 + r2
-        // Using same radius for marker as placemarker, for nice drop to place
         final int a = radius + this.radius;
         int dx, dy;
 
         dx = p.x - bounds.centerX();
         dy = p.y - bounds.centerY();
 
+        // Distance between two coordinates is less than the cricles radius
         if (a > Math.sqrt(dx * dx + dy * dy)) {
              return true;
         }
@@ -64,6 +66,11 @@ public class PlaceHolder implements Serializable
         return marker.getColor() == color;
     }
 
+    /**
+     * @description Retrieve the center point of placeholder
+     * @author Joel Denke
+     *
+     */
     public Point getCenterPoint()
     {
         return new Point(bounds.centerX(), bounds.centerY());

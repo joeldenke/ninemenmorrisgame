@@ -4,14 +4,11 @@ import android.content.Context;
 import android.util.Log;
 
 import java.io.*;
-import java.util.Calendar;
 
 /**
- * Created with IntelliJ IDEA.
- * User: joel
- * Date: 2013-12-04
- * Time: 14:36
- * To change this template use File | Settings | File Templates.
+ * @description Game data loader
+ * @author Joel Denke
+ *
  */
 public class GameLoader
 {
@@ -24,17 +21,27 @@ public class GameLoader
         this.fileName = fileName;
     }
 
+    /**
+     * @description Get file resource
+     * @author Joel Denke
+     *
+     */
     private File getFileResource(String filename)
     {
         return new File(context.getFilesDir(), filename);
     }
 
+    /**
+     * @description Load from file and return game data
+     * @author Joel Denke
+     *
+     */
     public GameData[] loadGames()
     {
         File file = getFileResource(fileName);
         Log.d("load", file.getAbsoluteFile().toString());
         GameData[] gameData = new GameData[5];
-        //file.delete();
+        file.delete();
 
         if (file.exists() && file.canRead()) {
             BufferedReader reader = null;
@@ -53,29 +60,16 @@ public class GameLoader
             }
         }
 
-        Log.d("load", String.format("Got %d number of datainstances", gameData.length));
-
         return gameData;
     }
 
     /**
-     * @description Write serialized data to file and send current datetime
+     * @description Write serialized data to file
      * @author Joel Denke
      *
      */
     public void writeGames(GameData[] gameData)
     {
-        if (gameData == null) {
-            Log.d("load", "Writing empty data ...");
-        } else {
-            int i;
-            for (i = 0; i < gameData.length; i++) {
-                if (gameData[i] == null) {
-                    Log.d("load", String.format("Element %d is fucking empty ...", i+1));
-                }
-            }
-        }
-
         File file = getFileResource(fileName);
         if (!file.exists()) {
             try {

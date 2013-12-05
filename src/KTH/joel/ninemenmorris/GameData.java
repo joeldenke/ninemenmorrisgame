@@ -1,16 +1,13 @@
 package KTH.joel.ninemenmorris;
 
 import android.graphics.Color;
-import android.graphics.Point;
 
 import java.io.Serializable;
 
 /**
- * Created with IntelliJ IDEA.
- * User: joel
- * Date: 2013-12-04
- * Time: 17:26
- * To change this template use File | Settings | File Templates.
+ * @description Metadata/State of the game, to store in file
+ * @author Joel Denke
+ *
  */
 public class GameData implements Serializable
 {
@@ -30,7 +27,6 @@ public class GameData implements Serializable
         prevState = States.Placing;
 
         markers = new Marker[markerSize];
-        // Always put new markers is empty space
         currentMarker = 0;
         marker = null;
     }

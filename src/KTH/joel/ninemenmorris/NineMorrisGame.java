@@ -1,29 +1,17 @@
 package KTH.joel.ninemenmorris;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Locale;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
 import android.content.Context;
 import android.content.Intent;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Point;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.*;
-import android.view.View.OnClickListener;
 import android.widget.*;
 
 /**
@@ -48,22 +36,42 @@ public class NineMorrisGame extends Activity
     public void onCreate(Bundle savedInstanceState)
     {
 	    super.onCreate(savedInstanceState);
-        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
-        currentBoard = Integer.parseInt(sharedPrefs.getString("prefGameBoard", "1")) - 1;
+        reloadSettings();
         initUI();
         started = true;
     }
 
+    /**
+     * @description Imports game data and create new game board if not created
+     * @author Joel Denke
+     *
+     */
     private GameBoard importGameData(int width, int height)
     {
-        //viewMessage(String.format("Got %d number of datainstances and current board is %d", gameData.length, currentBoard), true);
-
         if (gameBoards[currentBoard] == null) {
             GameData data = gameData[currentBoard];
             gameBoards[currentBoard] = new GameBoard(this, data, width, height);
         }
 
         return gameBoards[currentBoard];
+    }
+
+    /**
+     * @description Update game data from current game boards
+     * @author Joel Denke
+     *
+     */
+    private GameData[] getGameData()
+    {
+        int i;
+        for (i = 0; i < gameData.length; i++) {
+            if (gameBoards[i] != null) {
+                gameBoards[i].stopAnimation();
+                gameData[i] = gameBoards[i].getGameData();
+            }
+        }
+
+        return gameData;
     }
 
     public void viewMessage(int resId, boolean flash)
@@ -106,6 +114,11 @@ public class NineMorrisGame extends Activity
         initGameBoard();
     }
 
+    /**
+     * @description Initiaties the game board
+     * @author Joel Denke
+     *
+     */
     private void initGameBoard()
     {
         ViewGroup.LayoutParams params = surface.getLayoutParams();
@@ -114,24 +127,39 @@ public class NineMorrisGame extends Activity
         Point size = new Point();
         display.getSize(size);
         params.width = size.x - 50;
-        params.height = size.y - 300;
+        params.height = (int)(size.y*0.7);
 
         gameData = loader.loadGames();
 
-        GameBoard gameBoard = importGameData(size.x-50, size.y - 300);
+        GameBoard gameBoard = importGameData(size.x-50, (int)(size.y*0.7));
 
         surface.removeAllViews();
         surface.addView(gameBoard);
     }
 
+    /**
+     * @description Reload current board settings
+     * @author Joel Denke
+     *
+     */
+    private void reloadSettings()
+    {
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        currentBoard = Integer.parseInt(sharedPrefs.getString("prefGameBoard", "1")) - 1;
+    }
+
+    /**
+     * @description When preference activity is finished
+     * @author Joel Denke
+     *
+     */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         switch (requestCode) {
             case RESULT_SETTINGS:
-                SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
-                currentBoard = Integer.parseInt(sharedPrefs.getString("prefGameBoard", "1")) - 1;
+                reloadSettings();
                 initGameBoard();
                 break;
 
@@ -139,6 +167,11 @@ public class NineMorrisGame extends Activity
 
     }
 
+    /**
+     * @description Create menu from xml
+     * @author Joel Denke
+     *
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
@@ -146,10 +179,14 @@ public class NineMorrisGame extends Activity
         return true;
     }
 
+    /**
+     * @description Menu actions
+     * @author Joel Denke
+     *
+     */
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        //board.setGameStarted(false);
-
+    public boolean onOptionsItemSelected(MenuItem item)
+    {
         switch (item.getItemId()) {
             case R.id.menu_settings:
                 Intent i = new Intent(this, SettingsActivity.class);
@@ -159,7 +196,7 @@ public class NineMorrisGame extends Activity
                 viewMessage("Will now restart the game", true);
 
                 if (gameBoards[currentBoard] != null) {
-                    gameBoards[currentBoard].initGame();
+                    gameBoards[currentBoard].initGame(null);
                 }
                 break;
 
@@ -170,8 +207,7 @@ public class NineMorrisGame extends Activity
 
     /**
      * @description Overrides the start method, when app is resuming.
-     *              Will update to latest currency if file data is older than update frequency
-     *              and if not use offline data last stored.
+     *              Reload settings and init game board if not onCreate is called before
      *
      * @author Joel Denke
      *
@@ -183,8 +219,7 @@ public class NineMorrisGame extends Activity
     	super.onStart();
 
         if (!started) {
-            SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
-            currentBoard = Integer.parseInt(sharedPrefs.getString("prefGameBoard", "1")) - 1;
+            reloadSettings();
             initGameBoard();
         }
     }
@@ -204,23 +239,15 @@ public class NineMorrisGame extends Activity
         initUI();
     }
 
-    private GameData[] getData()
-    {
-        int i;
-        for (i = 0; i < gameData.length; i++) {
-            if (gameBoards[i] != null) {
-                gameBoards[i].stopAnimations();
-                gameData[i] = gameBoards[i].getGameData();
-            }
-        }
-
-        return gameData;
-    }
-
+    /**
+     * @description Write game data when app is pausing, stop or gets killed
+     * @author Joel Denke
+     *
+     */
     @Override
     protected void onPause()
     {
-        loader.writeGames(getData());
+        loader.writeGames(getGameData());
         super.onPause();
         Log.i("SaveActivity", "onPause called");
     }
@@ -228,16 +255,16 @@ public class NineMorrisGame extends Activity
     @Override
     protected void onStop()
     {
+        loader.writeGames(getGameData());
         super.onStop();
-        //loader.writeGames(gameData);
         Log.i("SaveActivity", "onStop called");
     }
 
     @Override
     protected void onDestroy()
     {
+        loader.writeGames(getGameData());
         super.onDestroy();
-        loader.writeGames(getData());
         Log.i("SaveActivity", "onDestroy called");
     }
 }

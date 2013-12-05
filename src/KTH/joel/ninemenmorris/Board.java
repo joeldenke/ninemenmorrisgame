@@ -5,11 +5,9 @@ import android.graphics.*;
 import java.io.Serializable;
 
 /**
- * Created with IntelliJ IDEA.
- * User: joel
- * Date: 2013-11-27
- * Time: 17:29
- * To change this template use File | Settings | File Templates.
+ * @description Board with placeholders
+ * @author Joel Denke
+ *
  */
 public class Board implements Serializable
 {
@@ -21,13 +19,13 @@ public class Board implements Serializable
     public Board(int x, int y, int width, int height)
     {
         bounds = new Rect(x, y, x+width, y+height);
-        //block = new Rect(0, 0, bounds.width() / cols, bounds.height() / rows);
 
         int i, j;
         for (i = 0; i < rows; i++) {
             for (j = 0; j < cols; j++) {
                 boolean fill = false;
 
+                // Formula to draw the board star layout
                 if ((i == j || rows-i-1 == j || cols-j-1==i ||
                         (i >= 2 && i < 5 && j >= 2 && j < 5) || i == 3 || j == 3
                 ) && !(i == 3 && j == 3)) {
@@ -39,6 +37,11 @@ public class Board implements Serializable
         }
     }
 
+    /**
+     * @description Get the block size and coordinate as a Android Rect
+     * @author Joel Denke
+     *
+     */
     public Rect getBlockBounds(int i, int j)
     {
         int width = (this.bounds.width() / cols), height = this.bounds.height() / rows;
@@ -59,6 +62,11 @@ public class Board implements Serializable
         return bounds;
     }
 
+    /**
+     * @description Return block position in matrix, if pointer intersects
+     * @author Joel Denke
+     *
+     */
     public Point circleIntersecting(Point p, int radius)
     {
         int i,j;
@@ -74,6 +82,11 @@ public class Board implements Serializable
         return new Point(-1, -1);
     }
 
+    /**
+     * @description Remove marker from placeholder
+     * @author Joel Denke
+     *
+     */
     public boolean removeMarker(Point from)
     {
         PlaceHolder ph = boardMatrix[from.x][from.y];
@@ -81,6 +94,11 @@ public class Board implements Serializable
         return true;
     }
 
+    /**
+     * @description Has player formed a mill? Checks if one color is three in a row both horinstally and vertically
+     * @author Joel Denke
+     *
+     */
     public boolean doThreeInARow(Point p, int color)
     {
          int player = (color == Color.RED) ? Color.BLUE : Color.RED;
@@ -110,6 +128,11 @@ public class Board implements Serializable
         return false;
     }
 
+    /**
+     * @description Move a marker from its current placeholder to another
+     * @author Joel Denke
+     *
+     */
     public void moveTo(Marker marker, Point to)
     {
         Point from = marker.getPosition();
@@ -140,7 +163,6 @@ public class Board implements Serializable
                     Paint p = new Paint();
                     p.setColor(Color.WHITE);
                     boardMatrix[i][j].draw(canvas, p);
-                        //drawPlaceMarker(i, j, canvas);
                 }
         }
     }
