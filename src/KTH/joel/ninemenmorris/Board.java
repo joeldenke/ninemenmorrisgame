@@ -37,6 +37,69 @@ public class Board implements Serializable
         }
     }
 
+    public void clearValid()
+    {
+        int i,j;
+
+        for (i = 0; i < rows; i++) {
+            for (j = 0; j < cols; j++) {
+                boardMatrix[i][j].setBorderColor(Color.WHITE);
+            }
+        }
+    }
+
+    public int markEmpty()
+    {
+        int c = 0;
+        int i, j;
+        for (i = 0; i < rows; i++) {
+            for (j = 0; j < cols; j++) {
+                if (!boardMatrix[i][j].hasMarker()) {
+                    boardMatrix[i][j].setBorderColor(Color.GREEN);
+                    c += 1;
+                }
+            }
+        }
+
+        return c;
+    }
+
+    public int markEmpty(Point p)
+    {
+        int c = 0, diff;
+        int d = 1;
+
+        //if (p.x != 3 && p.y != 3) {
+            if ((p.x == 1 || p.x == 5) || (p.y == 1 || p.y == 5)) {
+                d = 2;
+            }
+            if ((p.x == 0 || p.x == 6) || (p.y == 0 || p.y == 6)) {
+                d = 3;
+            }
+        //}
+
+        for (diff = 1; diff <= d; diff++) {
+            if (p.x < 6-diff && !boardMatrix[p.x + diff][p.y].hasMarker()) {
+                boardMatrix[p.x + diff][p.y].setBorderColor(Color.GREEN);
+                c += 1;
+            }
+            if (p.x > diff-1 && !boardMatrix[p.x - diff][p.y].hasMarker()) {
+                boardMatrix[p.x - diff][p.y].setBorderColor(Color.GREEN);
+                c += 1;
+            }
+            if (p.y < 6-diff && !boardMatrix[p.x][p.y + diff].hasMarker()) {
+                boardMatrix[p.x][p.y + diff].setBorderColor(Color.GREEN);
+                c += 1;
+            }
+            if (p.y > diff-1 && !boardMatrix[p.x][p.y - diff].hasMarker()) {
+                boardMatrix[p.x][p.y - diff].setBorderColor(Color.GREEN);
+                c += 1;
+            }
+        }
+
+        return c;
+    }
+
     /**
      * @description Get the block size and coordinate as a Android Rect
      * @author Joel Denke
@@ -101,28 +164,40 @@ public class Board implements Serializable
      */
     public boolean doThreeInARow(Point p, int color)
     {
-         int player = (color == Color.RED) ? Color.BLUE : Color.RED;
+        int diff, d = 1;
 
-         // Horisontal three markers of same color in a row
-         if (p.x > 0 && p.x < 6 && boardMatrix[p.x + 1][p.y].isColor(color) && boardMatrix[p.x - 1][p.y].isColor(color)) {
-             return true;
-         }
-        if (p.x < 5 && boardMatrix[p.x + 1][p.y].isColor(color) && boardMatrix[p.x + 2][p.y].isColor(color)) {
-            return true;
-        }
-        if (p.x > 1 && boardMatrix[p.x - 2][p.y].isColor(color) && boardMatrix[p.x - 1][p.y].isColor(color)) {
-            return true;
-        }
 
-         // Vertical three markers of same color in a row
-         if (p.y > 0 && p.y < 6 && boardMatrix[p.x][p.y + 1].isColor(color) && boardMatrix[p.x][p.y - 1].isColor(color)) {
-             return true;
-         }
-        if (p.y < 5 && boardMatrix[p.x][p.y + 1].isColor(color) && boardMatrix[p.x][p.y + 2].isColor(color)) {
-            return true;
-        }
-        if (p.y > 1 && boardMatrix[p.x][p.y - 1].isColor(color) && boardMatrix[p.x][p.y - 2].isColor(color)) {
-            return true;
+        //if (p.x != 3 && p.y != 3) {
+            if ((p.x == 1 || p.x == 5) || (p.y == 1 || p.y == 5)) {
+                d = 2;
+            }
+            if ((p.x == 0 || p.x == 6) || (p.y == 0 || p.y == 6)) {
+                d = 3;
+            }
+        //}
+
+        for (diff = 1; diff <= d; diff++) {
+            // Horisontal three markers of same color in a row
+            if (p.x > diff-1 && p.x < 6-diff && boardMatrix[p.x + diff][p.y].isColor(color) && boardMatrix[p.x - diff][p.y].isColor(color)) {
+                return true;
+            }
+            if (p.x < 7-diff-diff && boardMatrix[p.x + diff][p.y].isColor(color) && boardMatrix[p.x + diff+diff][p.y].isColor(color)) {
+                return true;
+            }
+            if (p.x > diff+diff-1 && boardMatrix[p.x - diff][p.y].isColor(color) && boardMatrix[p.x - diff - diff][p.y].isColor(color)) {
+                return true;
+            }
+
+            // Vertical three markers of same color in a row
+            if (p.y > diff-1 && p.y < 6-diff && boardMatrix[p.x][p.y + diff].isColor(color) && boardMatrix[p.x][p.y - diff].isColor(color)) {
+                return true;
+            }
+            if (p.y < 7-diff-diff && boardMatrix[p.x][p.y + diff].isColor(color) && boardMatrix[p.x][p.y + diff+diff].isColor(color)) {
+                return true;
+            }
+            if (p.y > diff+diff-1 && boardMatrix[p.x][p.y - diff].isColor(color) && boardMatrix[p.x][p.y - diff-diff].isColor(color)) {
+                return true;
+            }
         }
 
         return false;

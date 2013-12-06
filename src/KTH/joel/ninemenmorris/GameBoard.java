@@ -9,6 +9,7 @@ package KTH.joel.ninemenmorris;
  */
 
 import android.graphics.*;
+import android.util.Log;
 import android.view.*;
 
 import android.view.SurfaceView;
@@ -23,7 +24,7 @@ import java.io.Serializable;
  * @author Joel Denke
  *
  */
-enum States
+enum States implements Serializable
 {
     Placing, Moving, Flying, Removing, End
 }
@@ -150,7 +151,14 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Se
             this.data.markers[this.data.currentMarker] = createMarker(this.data.turn, markerStart);
         }
         update();
-        viewMessage("It is now " + ((this.data.turn == Color.RED) ? "red" : "blue") + " turn", true);
+        if (this.data.state != null && this.data.state != States.End) {
+           viewMessage("It is now " + ((this.data.turn == Color.RED) ? "red" : "blue") + " turn", true);
+        } else {
+            int winner = winner();
+            if (winner != -1) {
+                viewMessage(String.format("Color %s is the winner!", ((winner == Color.RED) ? "red" : "blue")), true);
+            }
+        }
     }
 
     /**
@@ -242,15 +250,9 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Se
 
         // Cannot move to same place another marker is positioned
         PlaceHolder holder = board.getPlaceHolder(to.x, to.y);
-        if (holder.getMarker() != null) {
+        if (holder == null || holder.getMarker() != null) {
             return false;
         }
-        /*
-        for (i = 0; i < data.markerSize; i++) {
-            if (data.markers[i] != null && data.markers[i].getPosition() != null && data.markers[i].getPosition().equals(to.x, to.y)) {
-                return false;
-            }
-        }*/
 
         // Flying
         if (countColor(data.turn) <= 3) {
@@ -261,7 +263,28 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Se
             case Placing:
                 return true;
             case Moving:
-                return (Math.abs(from.x - to.x) <= 1 && Math.abs(from.y - to.y) <= 1);
+                int diffx = 1, diffy = 1;
+
+                if (from.x == 3) {
+                      diffx = 3;
+                      diffy = 1;
+                } else if (from.y == 3) {
+                     diffx = 1;
+                    diffy = 3;
+                }
+                if ((from.x == 1 || from.x == 5) || (from.y == 1 || from.y == 5)) {
+                     diffx = diffy = 2;
+                } else if ((from.x == 0 || from.x == 6) || (from.y == 0 || from.y == 6)) {
+                    diffx = diffy = 3;
+                }
+
+                if (Math.abs(from.x - to.x) <= diffx && Math.abs(from.y - to.y) == 0) {
+                    return true;
+                } else if (Math.abs(from.x - to.x) == 0 && Math.abs(from.y - to.y) <= diffy) {
+                    return true;
+                } else {
+                    return false;
+                }
             default :
                 return false;
         }
@@ -324,6 +347,29 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Se
         return false;
     }
 
+    private int getValidMoves(int turn)
+    {
+        int i;
+        int validMoves = 0;
+
+        switch (data.state) {
+            case Placing:
+                validMoves = board.markEmpty();
+                break;
+            case Moving :
+                for (i = 0; i < data.markerSize; i++) {
+                    if (data.markers[i] != null && data.markers[i].getColor() == turn) {
+                        Point p = data.markers[i].getPosition();
+                        int j = board.markEmpty(p);
+                        validMoves += j;
+                    }
+                }
+                break;
+        }
+
+        return validMoves;
+    }
+
     /**
      * @description When user touch interacting on screen
      * @author Joel Denke
@@ -349,23 +395,18 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Se
                         if (removeMarker(p, data.removeColor)) {
                             data.state = data.prevState;
                         } else {
-                            viewMessage(String.format("Cannot remove color %s from [%d, %d]", ((data.removeColor == Color.RED) ? "red" : "blue"), p.x, p.y), false);
-                            return true;
-                        }
-
-                        // See if anyone won?
-                        int winner = winner();
-                        if (winner != -1) {
-                            data.state = States.End;
-                            viewMessage(String.format("Color %s is the winner!", ((winner == Color.RED) ? "red" : "blue")), true);
+                            viewMessage(String.format("Cannot remove from [%d, %d]", p.x, p.y), false);
                             return true;
                         }
                     } else {
                         // Move marker
                         board.moveTo(data.marker, p);
+                        board.clearValid();
 
                         // Do we have a mill formed?
-                        if (board.doThreeInARow(p, data.turn)) {
+                        //viewMessage(String.format("Has %s created a mill when placing [%d, %d]",
+                        //        ((data.marker.getColor() == Color.RED) ? "red" : "blue"), p.x, p.y), true);
+                        if (board.doThreeInARow(p, data.marker.getColor())) {
                             viewMessage("You created a mill, click on the other players marker to remove it", true);
                             data.prevState = data.state;
                             data.state = States.Removing;
@@ -377,6 +418,13 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Se
                     data.turn = (data.turn == Color.RED) ? Color.BLUE : Color.RED;
                     viewMessage("It is now " + ((data.turn == Color.RED) ? "red" : "blue") + " turn", true);
 
+
+                    /*if (getValidMoves(data.turn) == 0) {
+                        data.state = States.End;
+                        viewMessage(String.format("Color %s is the winner!", ((data.turn == Color.RED) ? "blue" : "red")), true);
+                        return true;
+                    }*/
+
                     if (data.state == States.Placing) {
                         // Create new marker if not all is placed yet
                         if (data.currentMarker < data.markerSize - 1) {
@@ -385,9 +433,21 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Se
                             data.state = States.Moving;
                         }
                     }
+
+                    // See if anyone won?
+                    int winner = winner();
+                    int moves = getValidMoves(data.turn);
+                    if (winner != -1 || moves == 0) {
+                        if (moves == 0) {
+                            winner = (data.turn == Color.RED) ? Color.BLUE : Color.RED;
+                        }
+                        data.state = States.End;
+                        viewMessage(String.format("Color %s is the winner!", ((winner == Color.RED) ? "red" : "blue")), true);
+                        return true;
+                    }
                 } else {
                     viewMessage(String.format("Invalid move [%d, %d]", p.x, p.y), true);
-                    data.marker.move(board, start);
+                    data.marker.move(board, board.getPlaceHolder(data.marker.getPosition().x, data.marker.getPosition().y).getCenterPoint());
                 }
                 stopAnimation();
                 update();
@@ -492,6 +552,27 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Se
         } catch (InterruptedException e) {}
     }
 
+    private void updateBoard()
+    {
+        int i;
+        startAnimation();
+        for (i = 0; i < data.markerSize; i++) {
+            if (data.markers[i] != null) {
+                Point p = data.markers[i].getPosition();
+                PlaceHolder ph = board.getPlaceHolder(p.x, p.y);
+                data.markers[i].setRadius(ph.getRadius() - 10);
+                data.markers[i].move(board, ph.getCenterPoint());
+
+                if (ph != null && ph.getMarker() == null) {
+                    ph.setMarker(data.markers[i]);
+                }
+            }
+        }
+        board.clearValid();
+
+        stopAnimation();
+    }
+
     /**
      * @description Create a new marker
      * @author Joel Denke
@@ -505,7 +586,9 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Se
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)
     {
-
+        invalidate();
+        updateBoard();
+        update();
     }
 
     /**
@@ -517,6 +600,7 @@ public class GameBoard extends SurfaceView implements SurfaceHolder.Callback, Se
     public void surfaceCreated(SurfaceHolder holder)
     {
         invalidate();
+        updateBoard();
         if (data.markers[data.currentMarker] == null) {
             data.markers[data.currentMarker] = createMarker(data.turn, markerStart);
         }

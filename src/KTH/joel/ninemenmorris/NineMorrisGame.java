@@ -106,7 +106,7 @@ public class NineMorrisGame extends Activity
 
         surface = (LinearLayout)findViewById(R.id.surface);
         textView = (TextView) findViewById(R.id.textUserSettings);
-        textView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        //textView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
         textView.setGravity(Gravity.CENTER);
         textView.setTextSize(30);
         textView.setTextColor(Color.WHITE);
@@ -126,12 +126,22 @@ public class NineMorrisGame extends Activity
         Display display = wm.getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
-        params.width = size.x - 50;
-        params.height = (int)(size.y*0.7);
+        Point p = new Point();
+
+        if (size.y > size.x) {
+            p.x = size.x - 50;
+            p.y = (int)(size.y*0.7);
+        } else {
+            p.x = size.x - 50;
+            p.y = (int)(size.y*0.5);
+        }
+
+        params.width = p.x;
+        params.height = p.y;
 
         gameData = loader.loadGames();
 
-        GameBoard gameBoard = importGameData(size.x-50, (int)(size.y*0.7));
+        GameBoard gameBoard = importGameData(p.x, p.y);
 
         surface.removeAllViews();
         surface.addView(gameBoard);

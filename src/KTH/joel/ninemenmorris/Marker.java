@@ -71,6 +71,11 @@ public class Marker implements Serializable
        return radius;
     }
 
+    public void setRadius(int radius)
+    {
+        this.radius = radius;
+    }
+
     /**
      * @description Is marker inside board bounds?
      * @author Joel Denke

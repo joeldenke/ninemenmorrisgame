@@ -15,6 +15,7 @@ public class PlaceHolder implements Serializable
     private Marker marker;
     private int radius;
     private boolean empty = true;
+    private int borderColor = Color.WHITE;
 
     public PlaceHolder(Rect bounds, boolean fill)
     {
@@ -35,6 +36,12 @@ public class PlaceHolder implements Serializable
     {
         return empty;
     }
+
+    public void setBorderColor(int borderColor)
+    {
+         this.borderColor = borderColor;
+    }
+
 
     /**
      * @description Is a marker intersecting with a placeHolder?
@@ -86,10 +93,19 @@ public class PlaceHolder implements Serializable
         return marker;
     }
 
+    public boolean hasMarker()
+    {
+        return (marker != null);
+    }
+
     public void draw(Canvas canvas, Paint p)
     {
         if (!empty) {
-            canvas.drawCircle(bounds.centerX(), bounds.centerY(), radius, p);
+            Paint p2 = new Paint();
+            p2.setColor(borderColor);
+
+            canvas.drawCircle(bounds.centerX(), bounds.centerY(), radius, p2);
+            canvas.drawCircle(bounds.centerX(), bounds.centerY(), radius - 5, p);
         }
     }
 }

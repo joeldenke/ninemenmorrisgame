@@ -41,7 +41,7 @@ public class GameLoader
         File file = getFileResource(fileName);
         Log.d("load", file.getAbsoluteFile().toString());
         GameData[] gameData = new GameData[5];
-        file.delete();
+        //file.delete();
 
         if (file.exists() && file.canRead()) {
             BufferedReader reader = null;
